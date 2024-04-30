@@ -41,3 +41,8 @@ Please cite [this paper](https://arxiv.org/abs/2309.12825) if you use *OmniDrone
 ## Ackowledgement
 
 Some of the abstractions and implementation was heavily inspired by [Isaac Orbit](https://github.com/NVIDIA-Omniverse/Orbit).
+
+
+
+
+python train.py headless=false task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200 task.env.num_envs=16

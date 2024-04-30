@@ -41,6 +41,7 @@ def design_scene():
         dynamic_friction=0.5,
         restitution=0.8,
         improve_patch_friction=True,
+        usd_path = "omniverse://localhost/Users/isaacsim/gridroom_with_wallgate.usd"
     )
     prim_utils.create_prim(
         "/World/Light/GreySphere",

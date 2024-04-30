@@ -20,24 +20,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
-from .single import Hover, Track, TrackV1
-from .platform import PlatformHover, PlatformFlyThrough
-from .inv_pendulum import InvPendulumHover, InvPendulumFlyThrough
-from .transport import TransportHover, TransportFlyThrough, TransportTrack
-from .formation import Formation
-from .payload import PayloadTrack, PayloadFlyThrough
-from .gate import GateFlyThrough
-from .dragon import DragonHover
-from .rearrange import Rearrange
-from .isaac_env import IsaacEnv
-
-try:
-    from .pinball import Pinball
-    from .forest import Forest
-except ModuleNotFoundError:
-    print(
-        "To run the environments which use `ContactSensor` and `RayCaster`,"
-        "please install Isaac Orbit (https://github.com/NVIDIA-Omniverse/orbit)."
-    )
-
+from .gate_fly_through import GateFlyThrough

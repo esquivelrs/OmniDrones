@@ -52,6 +52,27 @@ def create_obstacle(
 
     return prim
 
+
+def create_obstacle_path(
+    usd_path: str,
+    prim_path: str,
+    translation: Sequence[float],
+):
+    prim = prim_utils.create_prim(
+        prim_path=prim_path,
+        usd_path=usd_path,
+        translation=translation
+    )
+
+    UsdPhysics.RigidBodyAPI.Apply(prim)
+    UsdPhysics.CollisionAPI.Apply(prim)
+    prim.GetAttribute("physics:kinematicEnabled").Set(True)
+    kit_utils.set_collision_properties(
+        prim_path, contact_offset=0.02, rest_offset=0
+    )
+
+    return prim
+
 DEFAULT_JOINT_ATTRIBUTES = {
     "limit:rotX:physics:low": -120,
     "limit:rotX:physics:high": 120, 
