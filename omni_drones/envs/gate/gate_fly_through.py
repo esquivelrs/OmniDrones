@@ -36,12 +36,15 @@ import omni.isaac.core.utils.prims as prim_utils
 import omni.physx.scripts.utils as script_utils
 import omni.isaac.core.objects as objects
 from omni.isaac.debug_draw import _debug_draw
+from torchvision.io import write_video
 
 import omni_drones.utils.kit as kit_utils
 from omni_drones.utils.torch import euler_to_quaternion
 from omni_drones.envs.isaac_env import AgentSpec, IsaacEnv
 from omni_drones.robots.drone import MultirotorBase
 from omni_drones.views import RigidPrimView
+from omni_drones.sensors.camera import Camera, PinholeCameraCfg
+import dataclasses
 
 from ..utils import create_obstacle, create_obstacle_path
 from .utils import attach_payload
@@ -102,6 +105,7 @@ class GateFlyThrough(IsaacEnv):
         self.time_encoding = cfg.task.time_encoding
         self.reset_on_collision = cfg.task.reset_on_collision
         self.obstacle_spacing = cfg.task.obstacle_spacing
+        self.camera_resolution = cfg.task.camera.resolution
         super().__init__(cfg, headless)
 
         self.drone.initialize()
@@ -124,6 +128,39 @@ class GateFlyThrough(IsaacEnv):
             reset_xform_properties=False
         )
         self.payload_target_vis.initialize()
+
+        self.camera_cfg = PinholeCameraCfg(
+            sensor_tick=cfg.task.camera.sensor_tick,
+            resolution=tuple(self.camera_resolution),
+            data_types=cfg.task.camera.data_types,
+            usd_params=PinholeCameraCfg.UsdCameraCfg(
+                        focal_length=cfg.task.camera.focal_length,
+                        focus_distance=cfg.task.camera.focus_distance,
+                        horizontal_aperture=cfg.task.camera.horizontal_aperture,
+                        clipping_range=tuple(cfg.task.camera.clipping_range),
+                    ),
+            )
+        # cameras used as sensors
+        self.camera_sensor = Camera(self.camera_cfg)
+
+        # Print all prims in the scene
+           
+
+        ## add camera to the environment
+        self.camera_sensor.spawn([
+            f"/World/envs/env_0/{self.drone.name}_0/base_link/Camera"
+        ])
+
+
+
+        # for i in range(self.num_envs):
+        #     prim_path = f"/World/envs/env_{i}/{self.drone.name}_0/base_link/Camera"
+        #     if self.camera_sensor.exists(prim_path):
+        #         self.camera_sensor.delete(prim_path)
+        #     self.camera_sensor.spawn(prim_path)
+
+        self.camera_sensor.initialize(f"/World/envs/env_*/{self.drone.name}_*/base_link/Camera")
+        # self.frames_sensor = []
 
         self.init_vels = torch.zeros_like(self.drone.get_velocities())
         self.init_joint_pos = self.drone.get_joint_positions(True)
@@ -181,7 +218,7 @@ class GateFlyThrough(IsaacEnv):
         #omniverse://localhost/Users/isaacsim/gate.usd
         
         create_obstacle_path(
-            usd_path = "omniverse://localhost/Users/isaacsim/gate_lo.usd",
+            usd_path = "omniverse://localhost/Users/isaacsim/gate.usd",
             prim_path = "/World/envs/env_0/obstacle_0", 
             translation=(0., 0., 0.)
         )
@@ -196,12 +233,12 @@ class GateFlyThrough(IsaacEnv):
         )
 
         self.drone.spawn(translations=[(0.0, 0.0, 2.)])
-        attach_payload(f"/World/envs/env_0/{self.drone.name}_0", self.cfg.task.bar_length)
+        attach_payload(f"/World/envs/env_0/{self.drone.name}_0", self.cfg.task.bar_length,  payload_radius=0.004,payload_mass=0.03)
 
         sphere = objects.DynamicSphere(
             "/World/envs/env_0/target",
             translation=(1.5, 0., 1.),
-            radius=0.05,
+            radius=0.02,
             color=torch.tensor([1., 0., 0.])
         )
         kit_utils.set_collision_properties(sphere.prim_path, collision_enabled=False)
@@ -216,7 +253,8 @@ class GateFlyThrough(IsaacEnv):
             observation_dim += self.time_encoding_dim
         self.observation_spec = CompositeSpec({
             "agents": {
-                "observation": UnboundedContinuousTensorSpec((1, observation_dim))
+                "observation": UnboundedContinuousTensorSpec((1, observation_dim)),
+                "image": UnboundedContinuousTensorSpec((1, 1, self.camera_resolution[1], self.camera_resolution[0]))
             }
         }).expand(self.num_envs).to(self.device)
         self.action_spec = CompositeSpec({
@@ -288,6 +326,16 @@ class GateFlyThrough(IsaacEnv):
             self.drone_traj_vis.clear()
             self.draw.clear_lines()
 
+            
+        # if len(self.frames_sensor) > 0:
+        #     for image_type, arrays in torch.stack(self.frames_sensor).items():
+        #         print(f"Writing {image_type} of shape {arrays.shape}.")
+        #         for drone_id, arrays_drone in enumerate(arrays.unbind(1)):
+        #             if drone_id < 2:
+        #                 if image_type == "rgb":
+        #                     arrays_drone = arrays_drone.permute(0, 2, 3, 1)[..., :3]
+        #                     write_video(f"demo_rgb_{drone_id}.mp4", arrays_drone, fps=1/0.016)
+
     def _pre_sim_step(self, tensordict: TensorDictBase):
         actions = tensordict[("agents", "action")]
         self.effort = self.drone.apply_action(actions)
@@ -302,6 +350,9 @@ class GateFlyThrough(IsaacEnv):
         self.drone_payload_rpos = self.drone_state[..., :3] - self.payload_target_pos.unsqueeze(1)
         self.target_payload_rpos = (self.payload_target_pos - self.payload_pos).unsqueeze(1)
         obstacle_drone_rpos = self.obstacle_pos[..., [0, 2]] - self.drone_state[..., [0, 2]]
+
+        # camera sensor
+        # self.frames_sensor.append(self.camera_sensor.get_images().cpu())
         
         obs = [
             self.drone_payload_rpos,
@@ -313,6 +364,7 @@ class GateFlyThrough(IsaacEnv):
         if self.time_encoding:
             t = (self.progress_buf / self.max_episode_length).unsqueeze(-1)
             obs.append(t.expand(-1, self.time_encoding_dim).unsqueeze(1))
+        
         obs = torch.cat(obs, dim=-1)
 
         self.payload_pos_error = torch.norm(self.target_payload_rpos, dim=-1)
@@ -334,9 +386,20 @@ class GateFlyThrough(IsaacEnv):
             self.drone_traj_vis.append(drone_pos)
             self.payload_traj_vis.append(payload_pos)
             
+        # image in 3x240x320
+        image = self.camera_sensor.get_images()
+        image_float = image["rgb"].float()  # Convert to float
+        image_grey = image_float.mean(dim=1, keepdim=True) / 255.
+
+
+        #image = image["rgb"].permute(0, 3, 1, 2).float() / 255.
+        #print(image_grey.shape)
+
+
         return TensorDict({
             "agents": {
-                "observation": obs
+                "observation": obs,
+                "image": image_grey
             },
             "stats": self.stats,
             # "info": self.info
@@ -392,6 +455,8 @@ class GateFlyThrough(IsaacEnv):
         self.stats["success"].bitwise_or_(self.payload_pos_error < 0.2)
         self.stats["return"].add_(reward)
         self.stats["episode_len"][:] = self.progress_buf.unsqueeze(1)
+
+
 
         return TensorDict(
             {
