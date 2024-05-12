@@ -117,17 +117,17 @@ class GateFlyThrough(IsaacEnv):
             track_contact_forces=True
         )
         self.obstacles.initialize()
-        self.payload = RigidPrimView(
-            f"/World/envs/env_*/{self.drone.name}_*/payload",
-            reset_xform_properties=False,
-        )
-        self.payload.initialize()
+        # self.payload = RigidPrimView(
+        #     f"/World/envs/env_*/{self.drone.name}_*/payload",
+        #     reset_xform_properties=False,
+        # )
+        # self.payload.initialize()
 
-        self.payload_target_vis = RigidPrimView(
+        self.target_vis = RigidPrimView(
             "/World/envs/env_*/target",
             reset_xform_properties=False
         )
-        self.payload_target_vis.initialize()
+        self.target_vis.initialize()
 
         self.camera_cfg = PinholeCameraCfg(
             sensor_tick=cfg.task.camera.sensor_tick,
@@ -143,7 +143,7 @@ class GateFlyThrough(IsaacEnv):
         # cameras used as sensors
         self.camera_sensor = Camera(self.camera_cfg)
 
-        # Print all prims in the scene
+        # # Print all prims in the scene
            
 
         ## add camera to the environment
@@ -153,14 +153,14 @@ class GateFlyThrough(IsaacEnv):
 
 
 
-        # for i in range(self.num_envs):
-        #     prim_path = f"/World/envs/env_{i}/{self.drone.name}_0/base_link/Camera"
-        #     if self.camera_sensor.exists(prim_path):
-        #         self.camera_sensor.delete(prim_path)
-        #     self.camera_sensor.spawn(prim_path)
+        # # for i in range(self.num_envs):
+        # #     prim_path = f"/World/envs/env_{i}/{self.drone.name}_0/base_link/Camera"
+        # #     if self.camera_sensor.exists(prim_path):
+        # #         self.camera_sensor.delete(prim_path)
+        # #     self.camera_sensor.spawn(prim_path)
 
         self.camera_sensor.initialize(f"/World/envs/env_*/{self.drone.name}_*/base_link/Camera")
-        # self.frames_sensor = []
+        self.frames_sensor = []
 
         self.init_vels = torch.zeros_like(self.drone.get_velocities())
         self.init_joint_pos = self.drone.get_joint_positions(True)
@@ -172,24 +172,24 @@ class GateFlyThrough(IsaacEnv):
             torch.tensor([-1.0, 1., 1.2], device=self.device)
         )
         self.init_rpy_dist = D.Uniform(
-            torch.tensor([-.2, -.2, 0.], device=self.device) * torch.pi,
-            torch.tensor([.2, .2, 2], device=self.device) * torch.pi
+            torch.tensor([-.1, -.2, -.2], device=self.device) * torch.pi,
+            torch.tensor([.2, .2, .2], device=self.device) * torch.pi
         )
         self.obstacle_spacing_dist = D.Uniform(
             torch.tensor(self.obstacle_spacing[0], device=self.device),
             torch.tensor(self.obstacle_spacing[1], device=self.device)
         )
-        self.payload_target_pos_dist = D.Uniform(
+        self.target_pos_dist = D.Uniform(
             torch.tensor([1.3, 0., 0.5], device=self.device),
             torch.tensor([1.5, 0., 1.2], device=self.device)
         )
-        payload_mass_scale = self.cfg.task.payload_mass_scale
-        self.payload_mass_dist = D.Uniform(
-            torch.as_tensor(payload_mass_scale[0] * self.drone.MASS_0, device=self.device),
-            torch.as_tensor(payload_mass_scale[1] * self.drone.MASS_0, device=self.device)
-        )
+        # payload_mass_scale = self.cfg.task.payload_mass_scale
+        # self.payload_mass_dist = D.Uniform(
+        #     torch.as_tensor(payload_mass_scale[0] * self.drone.MASS_0, device=self.device),
+        #     torch.as_tensor(payload_mass_scale[1] * self.drone.MASS_0, device=self.device)
+        # )
 
-        self.payload_target_pos = torch.zeros(self.num_envs, 3, device=self.device)
+        self.target_pos = torch.zeros(self.num_envs, 3, device=self.device)
         self.alpha = 0.8
 
         self.draw = _debug_draw.acquire_debug_draw_interface()
@@ -216,9 +216,11 @@ class GateFlyThrough(IsaacEnv):
         # )
 
         #omniverse://localhost/Users/isaacsim/gate.usd
+        #omniverse://localhost/Users/isaacsim/Collected_manhole_cage/manhole_cage.usd
+        #/home/isaacsim/Documents/manhole_cage_08/parts/Part_1_JHD.usd
         
         create_obstacle_path(
-            usd_path = "omniverse://localhost/Users/isaacsim/gate.usd",
+            usd_path = "/home/isaacsim/Documents//manhole.usd",
             prim_path = "/World/envs/env_0/obstacle_0", 
             translation=(0., 0., 0.)
         )
@@ -233,7 +235,7 @@ class GateFlyThrough(IsaacEnv):
         )
 
         self.drone.spawn(translations=[(0.0, 0.0, 2.)])
-        attach_payload(f"/World/envs/env_0/{self.drone.name}_0", self.cfg.task.bar_length,  payload_radius=0.004,payload_mass=0.03)
+        #attach_payload(f"/World/envs/env_0/{self.drone.name}_0", self.cfg.task.bar_length,  payload_radius=0.004,payload_mass=0.03)
 
         sphere = objects.DynamicSphere(
             "/World/envs/env_0/target",
@@ -247,7 +249,7 @@ class GateFlyThrough(IsaacEnv):
 
     def _set_specs(self):
         drone_state_dim = self.drone.state_spec.shape[-1]
-        observation_dim = drone_state_dim + 9 + 4
+        observation_dim = drone_state_dim + 4
         if self.time_encoding:
             self.time_encoding_dim = 4
             observation_dim += self.time_encoding_dim
@@ -279,8 +281,9 @@ class GateFlyThrough(IsaacEnv):
         stats_spec = CompositeSpec({
             "return": UnboundedContinuousTensorSpec(1),
             "episode_len": UnboundedContinuousTensorSpec(1),
-            "payload_pos_error": UnboundedContinuousTensorSpec(1),
+            "drone_pos_error": UnboundedContinuousTensorSpec(1),
             "drone_uprightness": UnboundedContinuousTensorSpec(1),
+            "drone_spin": UnboundedContinuousTensorSpec(1),
             "collision": UnboundedContinuousTensorSpec(1),
             "success": BinaryDiscreteTensorSpec(1, dtype=bool),
         }).expand(self.num_envs).to(self.device)
@@ -300,14 +303,14 @@ class GateFlyThrough(IsaacEnv):
         self.drone.set_joint_positions(self.init_joint_pos[env_ids], env_ids)
         self.drone.set_joint_velocities(self.init_joint_vels[env_ids], env_ids)
 
-        payload_target_pos = self.payload_target_pos_dist.sample(env_ids.shape)
-        self.payload_target_pos[env_ids] = payload_target_pos
-        self.payload_target_vis.set_world_poses(
-            payload_target_pos + self.envs_positions[env_ids], 
+        target_pos = self.target_pos_dist.sample(env_ids.shape)
+        self.target_pos[env_ids] = target_pos
+        self.target_vis.set_world_poses(
+            target_pos + self.envs_positions[env_ids], 
             env_indices=env_ids
         )
-        payload_mass = self.payload_mass_dist.sample(env_ids.shape)
-        self.payload.set_masses(payload_mass, env_ids)
+        # payload_mass = self.payload_mass_dist.sample(env_ids.shape)
+        # self.payload.set_masses(payload_mass, env_ids)
 
         obstacle_spacing = self.obstacle_spacing_dist.sample(env_ids.shape)
         obstacle_pos = torch.zeros(len(env_ids), 2, 3, device=self.device)
@@ -343,48 +346,59 @@ class GateFlyThrough(IsaacEnv):
     def _compute_state_and_obs(self):
         self.drone_state = self.drone.get_state()
         self.drone_up = self.drone_state[..., 16:19]
-        self.payload_pos = self.get_env_poses(self.payload.get_world_poses())[0]
-        self.payload_vels = self.payload.get_velocities()
+        # self.payload_pos = self.get_env_poses(self.payload.get_world_poses())[0]
+        # self.payload_vels = self.payload.get_velocities()
+        self.drone_pos = self.get_env_poses(self.drone.get_world_poses())[0]
+        # heading
+        #self.drone_heading = prim_utils.get_heading(self.drone_state[..., 16:19])
 
         # relative position and heading
-        self.drone_payload_rpos = self.drone_state[..., :3] - self.payload_target_pos.unsqueeze(1)
-        self.target_payload_rpos = (self.payload_target_pos - self.payload_pos).unsqueeze(1)
+        #self.drone_payload_rpos = self.drone_state[..., :3] - self.target_pos.unsqueeze(1)
+
+
+        self.target_rpos = self.target_pos.unsqueeze(1) - self.drone_state[..., :3]
         obstacle_drone_rpos = self.obstacle_pos[..., [0, 2]] - self.drone_state[..., [0, 2]]
 
         # camera sensor
         # self.frames_sensor.append(self.camera_sensor.get_images().cpu())
         
         obs = [
-            self.drone_payload_rpos,
+            self.target_rpos,
             self.drone_state[..., 3:],
-            self.target_payload_rpos, # 3
-            self.payload_vels.unsqueeze(1), # 6
             obstacle_drone_rpos.flatten(start_dim=-2).unsqueeze(1),
         ]
+
+        ## print shapes of all observations
+        # for ob in obs:
+        #     print(ob.shape)
+
+
         if self.time_encoding:
             t = (self.progress_buf / self.max_episode_length).unsqueeze(-1)
             obs.append(t.expand(-1, self.time_encoding_dim).unsqueeze(1))
         
         obs = torch.cat(obs, dim=-1)
 
-        self.payload_pos_error = torch.norm(self.target_payload_rpos, dim=-1)
-        self.stats["payload_pos_error"].lerp_(self.payload_pos_error, (1-self.alpha))
+        self.drone_pos_error = torch.norm(self.target_rpos, dim=-1)
+        self.stats["drone_pos_error"].lerp_(self.drone_pos_error, (1-self.alpha))
         self.stats["drone_uprightness"].lerp_(self.drone_up[..., 2], (1-self.alpha))
+        # also add spining
+        self.stats["drone_spin"].lerp_(self.drone_state[..., 19], (1-self.alpha))
 
         if self._should_render(0):
             central_env_pos = self.envs_positions[self.central_env_idx]
             drone_pos = (self.drone.pos[self.central_env_idx, 0]+central_env_pos).tolist()
-            payload_pos = (self.payload_pos[self.central_env_idx]+central_env_pos).tolist()
+            #payload_pos = (self.drone_pos[self.central_env_idx]+central_env_pos).tolist()
             
             if len(self.payload_traj_vis)>1:
                 point_list_0 = [self.payload_traj_vis[-1], self.drone_traj_vis[-1]]
-                point_list_1 = [payload_pos, drone_pos]
+                point_list_1 = [drone_pos, drone_pos]
                 colors = [(1., .1, .1, 1.), (.1, 1., .1, 1.)]
                 sizes = [1.5, 1.5]
                 self.draw.draw_lines(point_list_0, point_list_1, colors, sizes)
             
             self.drone_traj_vis.append(drone_pos)
-            self.payload_traj_vis.append(payload_pos)
+            self.payload_traj_vis.append(drone_pos)
             
         # image in 3x240x320
         image = self.camera_sensor.get_images()
@@ -407,7 +421,7 @@ class GateFlyThrough(IsaacEnv):
 
     def _compute_reward_and_done(self):
         
-        reward_pos = 1.0 / (1.0 + torch.square(self.reward_distance_scale * self.payload_pos_error))
+        reward_pos = 1.0 / (1.0 + torch.square(self.reward_distance_scale * self.drone_pos_error))
         # pose_reward = torch.exp(-distance * self.reward_distance_scale)
 
         reward_up = torch.square((self.drone_up[..., 2] + 1) / 2)
@@ -415,10 +429,10 @@ class GateFlyThrough(IsaacEnv):
         reward_effort = self.reward_effort_weight * torch.exp(-self.effort)
 
         spin = torch.square(self.drone.vel[..., -1])
-        reward_spin = 0.5 / (1.0 + torch.square(spin))
+        reward_spin = 1.0 / (1.0 + torch.square(spin))
 
-        swing = torch.norm(self.payload_vels[..., :3], dim=-1, keepdim=True)
-        reward_swing = 0.5 * torch.exp(-swing)
+        # swing = torch.norm(self.payload_vels[..., :3], dim=-1, keepdim=True)
+        # reward_swing = 0.5 * torch.exp(-swing)
         
         collision = (
             self.obstacles
@@ -429,10 +443,10 @@ class GateFlyThrough(IsaacEnv):
         collision_reward = collision.float()
 
         self.stats["collision"].add_(collision_reward)
-        assert reward_pos.shape == reward_up.shape == reward_spin.shape == reward_swing.shape
+        assert reward_pos.shape == reward_up.shape == reward_spin.shape
         reward = (
             reward_pos 
-            + reward_pos * (reward_up + reward_spin + reward_swing) 
+            + reward_pos * (reward_up + reward_spin) 
             + reward_effort
         ) * (1 - collision_reward)
         
@@ -440,7 +454,6 @@ class GateFlyThrough(IsaacEnv):
             (self.drone.pos[..., 2] < 0.2) 
             | (self.drone.pos[..., 2] > 1.5)
             | (self.drone.pos[..., 1].abs() > 1.)
-            | (self.payload_pos[..., 2] < 0.15).unsqueeze(1)
         )
         hasnan = torch.isnan(self.drone_state).any(-1)
 
@@ -452,7 +465,7 @@ class GateFlyThrough(IsaacEnv):
 
         done = terminated | truncated
         
-        self.stats["success"].bitwise_or_(self.payload_pos_error < 0.2)
+        self.stats["success"].bitwise_or_(self.drone_pos_error < 0.2)
         self.stats["return"].add_(reward)
         self.stats["episode_len"][:] = self.progress_buf.unsqueeze(1)
 

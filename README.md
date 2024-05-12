@@ -46,3 +46,6 @@ Some of the abstractions and implementation was heavily inspired by [Isaac Orbit
 
 
 python train.py headless=false task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200 task.env.num_envs=16
+python train.py headless=true task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200
+
+python train_gate.py headless=true task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200 task.env.num_envs=16

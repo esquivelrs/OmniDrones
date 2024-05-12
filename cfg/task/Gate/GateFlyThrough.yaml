@@ -8,9 +8,9 @@ defaults:
   # - /base/randomization_base@_here_
 
 
-env:
-  num_envs: 128
-  max_episode_length: 200
+# env:
+#   num_envs: 4096
+#   max_episode_length: 500
 
 
 drone_model: Crazyflie
@@ -32,9 +32,9 @@ action_transform: null
 
 camera:
   sensor_tick: 0
-  resolution: [320, 240]
+  resolution: [64, 64]
   data_types: ["rgb"]
-  focal_length: 24.0
+  focal_length: 18.0
   focus_distance: 400.0
   horizontal_aperture: 20.955
   clipping_range: [0.1, 1.0e5]
