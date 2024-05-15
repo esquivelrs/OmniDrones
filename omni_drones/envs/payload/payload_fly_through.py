@@ -293,12 +293,16 @@ class PayloadFlyThrough(IsaacEnv):
         obstacle_drone_rpos = self.obstacle_pos[..., [0, 2]] - self.drone_state[..., [0, 2]]
         
         obs = [
-            self.drone_payload_rpos,
-            self.drone_state[..., 3:],
-            self.target_payload_rpos, # 3
+            self.drone_payload_rpos, #3
+            self.drone_state[..., 3:], #20
+            self.target_payload_rpos, # 3 
             self.payload_vels.unsqueeze(1), # 6
-            obstacle_drone_rpos.flatten(start_dim=-2).unsqueeze(1),
+            obstacle_drone_rpos.flatten(start_dim=-2).unsqueeze(1), #4
         ]
+
+        for ob in obs:
+            print(ob.shape)
+
         if self.time_encoding:
             t = (self.progress_buf / self.max_episode_length).unsqueeze(-1)
             obs.append(t.expand(-1, self.time_encoding_dim).unsqueeze(1))
