@@ -189,7 +189,7 @@ class MultirotorBase(RobotBase):
     def setup_randomization(self, cfg):
         if not self.initialized:
             raise RuntimeError
-        
+        print(f"CONFIG: {cfg}")
         for phase in ("train", "eval"):
             if phase not in cfg: continue
             mass_scale = cfg[phase].get("mass_scale", None)
@@ -204,6 +204,7 @@ class MultirotorBase(RobotBase):
                 self.randomization[phase]["inertia"] = D.Uniform(low, high)
             t2w_scale = cfg[phase].get("t2w_scale", None)
             if t2w_scale is not None:
+                print("HERE!!!!")
                 low = self.THRUST2WEIGHT_0 * torch.as_tensor(t2w_scale[0], device=self.device)
                 high = self.THRUST2WEIGHT_0 * torch.as_tensor(t2w_scale[1], device=self.device)
                 self.randomization[phase]["thrust2weight"] = D.Uniform(low, high)
@@ -241,7 +242,7 @@ class MultirotorBase(RobotBase):
             if not len(self.randomization[phase]) == len(cfg[phase]):
                 unkown_keys = set(cfg[phase].keys()) - set(self.randomization[phase].keys())
                 raise ValueError(
-                    f"Unknown randomization {unkown_keys}."
+                    f"Unknown randomization phase: {phase} keys: {unkown_keys}. rand {self.randomization[phase].keys()} CFG {cfg[phase].keys()}"
                 )
 
         logging.info(f"Setup randomization:\n" + pprint.pformat(dict(self.randomization)))
