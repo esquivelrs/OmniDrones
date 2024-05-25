@@ -116,16 +116,23 @@ class Hover(IsaacEnv):
         self.reward_action_smoothness_weight = cfg.task.reward_action_smoothness_weight
         self.reward_distance_scale = cfg.task.reward_distance_scale
         self.time_encoding = cfg.task.time_encoding
-        self.randomization = cfg.task.get("randomization", {})
-        self.has_payload = "payload" in self.randomization.keys()
+        #self.randomization = cfg.task.get("randomization", {})
+        # self.has_payload = "payload" in randomization.keys()
+        self.has_payload = False
 
         super().__init__(cfg, headless)
 
         self.drone.initialize()
-        if "drone" in self.randomization:
-            self.drone.setup_randomization(self.randomization["drone"])
-        if "payload" in self.randomization:
-            payload_cfg = self.randomization["payload"]
+
+        randomization = self.cfg.task.get("randomization", None)
+        
+
+
+        if randomization is not None:
+            if "drone" in self.cfg.task.randomization:
+                self.drone.setup_randomization(self.cfg.task.randomization["drone"])
+        if "payload" in randomization:
+            payload_cfg = randomization["payload"]
             self.payload_z_dist = D.Uniform(
                 torch.tensor([payload_cfg["z"][0]], device=self.device),
                 torch.tensor([payload_cfg["z"][1]], device=self.device)
