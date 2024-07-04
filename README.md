@@ -49,3 +49,8 @@ python train.py headless=false task=Gate/GateFlyThrough wandb.entity=dtu-project
 python train.py headless=true task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200
 
 python train_gate.py headless=true task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200 task.env.num_envs=16
+
+
+## Docker container:
+make image
+bash docker-run.sh /home/rolando/Documents/DTU/SCPercept/OmniDrones/sim2real_omnidrones/ws
