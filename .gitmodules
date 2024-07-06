@@ -1,0 +1,3 @@
+[submodule "sim2real_omnidrones"]
+	path = sim2real_omnidrones
+	url = git@github.com:esquivelrs/sim2real_omnidrones.git
