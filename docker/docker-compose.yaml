@@ -20,7 +20,7 @@ services:
       - ~/docker/isaac-sim/logs:/root/.nvidia-omniverse/logs:rw
       - ~/docker/isaac-sim/data:/root/.local/share/ov/data:rw
       - ~/docker/isaac-sim/documents:/root/Documents:rw
-      - /home/isaacsim/OmniDrones:/home/ubuntu/OmniDrones:rw
+      - ./../../OmniDrones:/home/ubuntu/OmniDrones:rw
     deploy:
       resources:
         reservations:
