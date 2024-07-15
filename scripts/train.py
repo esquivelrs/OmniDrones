@@ -35,6 +35,44 @@ from torchrl.envs.transforms import TransformedEnv, InitTracker, Compose
 
 FILE_PATH = os.path.dirname(__file__)
 
+
+# Saving the full model state
+def save_full_model(policy, cfg, frames, run_dir, env):
+    ckpt_path = os.path.join(run_dir, f"full_checkpoint_full_{frames}.pt")
+    full_state = {
+        'model_state_dict': policy.state_dict(),
+        'algorithm': cfg.algo.name,
+        'algorithm_config': OmegaConf.to_container(cfg.algo, resolve=True),
+        'frames': frames,
+        'observation_spec': env.observation_spec,
+        'action_spec': env.action_spec,
+        'reward_spec': env.reward_spec,
+    }
+    torch.save(full_state, ckpt_path)
+    logging.info(f"Saved full checkpoint to {str(ckpt_path)}")
+
+
+
+# Loading the full model state
+def load_full_model(ckpt_path, device):
+    full_state = torch.load(ckpt_path, map_location=device)
+    
+    # Recreate the policy
+    algorithm = ALGOS[full_state['algorithm'].lower()]
+    policy = algorithm(
+        full_state['algorithm_config'],
+        full_state['observation_spec'],
+        full_state['action_spec'],
+        full_state['reward_spec'],
+        device=device
+    )
+    
+    # Load the model state
+    policy.load_state_dict(full_state['model_state_dict'])
+    
+    return policy, full_state
+
+
 @hydra.main(config_path=FILE_PATH, config_name="train")
 def main(cfg):
     OmegaConf.register_new_resolver("eval", eval)
@@ -233,9 +271,15 @@ def main(cfg):
         ckpt_path = os.path.join(run.dir, "checkpoint_final.pt")
         torch.save(policy.state_dict(), ckpt_path)
         logging.info(f"Saved checkpoint to {str(ckpt_path)}")
+        # Use this function in your training loop
+
+
+
     except AttributeError:
         logging.warning(f"Policy {policy} does not implement `.state_dict()`")
         
+
+    save_full_model(policy, cfg, collector._frames, run.dir, env)
 
     wandb.finish()
     

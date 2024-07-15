@@ -49,3 +49,11 @@ python train.py headless=false task=Gate/GateFlyThrough wandb.entity=dtu-project
 python train.py headless=true task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200
 
 python train_gate.py headless=true task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200 task.env.num_envs=16
+
+
+python train.py task=Hover algo=ppo headless=true wandb.entity=dtu-projects task.env.num_envs=2048 eval_interval=200
+
+
+python train.py task=Hover algo=ppo headless=true wandb.entity=dtu-projects task.env.num_envs=500 eval_interval=2000 task.drone_model=crazyflie task.action_transform=rate
+
+python play.py task=Hover algo=ppo headless=false task.env.num_envs=1 task.drone_model=crazyflie task.action_transform=rate algo.checkpoint_path=outputs/2024-07-10/20-54-59/wandb/latest-run/files/checkpoint_final.pt

@@ -33,5 +33,5 @@ wandb:
 
 defaults:
   - task: Hover
-  - algo: sac
+  - algo: ppo
   - _self_

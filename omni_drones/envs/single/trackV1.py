@@ -207,6 +207,13 @@ class TrackV1(IsaacEnv):
             .expand(self.num_envs)
             .to(self.device)
         )
+
+
+        print("##################### specs")
+        print(self.observation_spec)
+        print(self.action_spec)
+        print(self.reward_spec)
+
         self.done_spec = (
             CompositeSpec(
                 {
@@ -349,6 +356,7 @@ class TrackV1(IsaacEnv):
 
     def _pre_sim_step(self, tensordict: TensorDictBase):
         actions = tensordict[("agents", "action")]
+        #print(actions)
         self.effort = self.drone.apply_action(actions)
         self.info["prev_action"][:] = actions
 
@@ -382,6 +390,14 @@ class TrackV1(IsaacEnv):
 
         obs = torch.cat(obs, dim=-1)
         self.observation_h[..., -1] = obs
+
+        # print(obs.shape)
+        # print(obs)
+        # print(self.observation_h.shape)
+        # print(self.observation_h)
+        # print(self.intrinsics.shape)
+        # print(self.intrinsics)
+
 
         return TensorDict(
             {

@@ -35,7 +35,7 @@ from torchrl.envs.transforms import TransformedEnv, InitTracker, Compose
 
 FILE_PATH = os.path.dirname(__file__)
 
-@hydra.main(config_path=FILE_PATH, config_name="test")
+@hydra.main(config_path=FILE_PATH, config_name="train")
 def main(cfg):
     OmegaConf.register_new_resolver("eval", eval)
     OmegaConf.resolve(cfg)
@@ -110,6 +110,16 @@ def main(cfg):
     except KeyError:
         raise NotImplementedError(f"Unknown algorithm: {cfg.algo.name}")
 
+    # print(policy)
+    # print(env.observation_spec)
+    # print(env.action_spec)
+    # print(env.reward_spec)
+    print(f'Observation spec: {env.observation_spec}')
+    print(f'Action spec: {env.action_spec}')
+    print(f'Reward spec: {env.reward_spec}')    
+    
+
+    exit()
     frames_per_batch = env.num_envs * int(cfg.algo.train_every)
     total_frames = cfg.get("total_frames", -1) // frames_per_batch * frames_per_batch
     max_iters = cfg.get("max_iters", -1)
@@ -172,18 +182,6 @@ def main(cfg):
             for k, v in traj_stats.items()
         }
 
-        # # images format torch.Size([2, 500, 1, 240, 320]) this is NxframesxCxHxW
-        # images = trajs[("next", "agents", "image")][0].cpu()
-        # #print(images.shape)
-        # images = (images * 255).type(torch.uint8)
-
-        # # permute the images and conver to a wandb video based on the frames
-        # #images = images.permute(0, 2, 3, 1)[..., :3]
-        # info["recording_onboard"] = wandb.Video(images, fps=0.5 / (cfg.sim.dt * cfg.sim.substeps))
-        
-
-
-
         # log video
         info["recording"] = wandb.Video(
             render_callback.get_video_array(axes="t c h w"), 
@@ -199,54 +197,47 @@ def main(cfg):
 
         return info
 
-    # pbar = tqdm(collector)
-    # env.train()
-    # for i, data in enumerate(pbar):
-    #     info = {"env_frames": collector._frames, "rollout_fps": collector._fps}
-    #     episode_stats.add(data.to_tensordict())
+    pbar = tqdm(collector)
+    env.train()
+    for i, data in enumerate(pbar):
+        info = {"env_frames": collector._frames, "rollout_fps": collector._fps}
+        episode_stats.add(data.to_tensordict())
         
-    #     if len(episode_stats) >= base_env.num_envs:
-    #         stats = {
-    #             "train/" + (".".join(k) if isinstance(k, tuple) else k): torch.mean(v.float()).item() 
-    #             for k, v in episode_stats.pop().items(True, True)
-    #         }
-    #         info.update(stats)
+        if len(episode_stats) >= base_env.num_envs:
+            stats = {
+                "train/" + (".".join(k) if isinstance(k, tuple) else k): torch.mean(v.float()).item() 
+                for k, v in episode_stats.pop().items(True, True)
+            }
+            info.update(stats)
 
-    #     info.update(policy.train_op(data.to_tensordict()))
+        info.update(policy.train_op(data.to_tensordict()))
 
-    #     if eval_interval > 0 and i % eval_interval == 0:
-    #         logging.info(f"Eval at {collector._frames} steps.")
-    #         info.update(evaluate())
-    #         env.train()
-    #         base_env.train()
-
-    #     if save_interval > 0 and i % save_interval == 0:
-    #         try:
-    #             ckpt_path = os.path.join(run.dir, f"checkpoint_{collector._frames}.pt")
-    #             torch.save(policy.state_dict(), ckpt_path)
-    #             logging.info(f"Saved checkpoint to {str(ckpt_path)}")
-    #         except AttributeError:
-    #             logging.warning(f"Policy {policy} does not implement `.state_dict()`")
-
-    #     run.log(info)
-    #     print(OmegaConf.to_yaml({k: v for k, v in info.items() if isinstance(v, float)}))
-
-    #     pbar.set_postfix({"rollout_fps": collector._fps, "frames": collector._frames})
-
-    #     if max_iters > 0 and i >= max_iters - 1:
-    #         break 
-    
-
-
-
-    while True:
-        try:    
+        if eval_interval > 0 and i % eval_interval == 0:
             logging.info(f"Eval at {collector._frames} steps.")
-            info = {"env_frames": collector._frames}
             info.update(evaluate())
-            run.log(info)
-        except KeyboardInterrupt:
-            break
+            env.train()
+            base_env.train()
+
+        if save_interval > 0 and i % save_interval == 0:
+            try:
+                ckpt_path = os.path.join(run.dir, f"checkpoint_{collector._frames}.pt")
+                torch.save(policy.state_dict(), ckpt_path)
+                logging.info(f"Saved checkpoint to {str(ckpt_path)}")
+            except AttributeError:
+                logging.warning(f"Policy {policy} does not implement `.state_dict()`")
+
+        run.log(info)
+        print(OmegaConf.to_yaml({k: v for k, v in info.items() if isinstance(v, float)}))
+
+        pbar.set_postfix({"rollout_fps": collector._fps, "frames": collector._frames})
+
+        if max_iters > 0 and i >= max_iters - 1:
+            break 
+    
+    logging.info(f"Final Eval at {collector._frames} steps.")
+    info = {"env_frames": collector._frames}
+    info.update(evaluate())
+    run.log(info)
 
     try:
         ckpt_path = os.path.join(run.dir, "checkpoint_final.pt")

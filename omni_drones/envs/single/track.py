@@ -256,6 +256,7 @@ class Track(IsaacEnv):
 
     def _pre_sim_step(self, tensordict: TensorDictBase):
         actions = tensordict[("agents", "action")]
+        #print(actions)
         self.effort = self.drone.apply_action(actions)
 
         if self.wind:
@@ -286,6 +287,8 @@ class Track(IsaacEnv):
 
         self.stats["action_smoothness"].lerp_(-self.drone.throttle_difference, (1-self.alpha))
 
+        # print(obs.shape)
+        # print(obs)
         return TensorDict({
             "agents": {
                 "observation": obs,
@@ -315,7 +318,8 @@ class Track(IsaacEnv):
         reward_spin = 0.5 / (1.0 + torch.square(spin))
 
         reward = (
-            reward_pose 
+            
+             
             + reward_pose * (reward_up + reward_spin) 
             + reward_effort
             + reward_action_smoothness

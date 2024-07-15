@@ -58,7 +58,7 @@ def attach_payload(parent_path):
     joint.GetAttribute("drive:linear:physics:stiffness").Set(10000.)
 
 
-class Hover(IsaacEnv):
+class HoverTo(IsaacEnv):
     r"""
     A basic control task. The goal for the agent is to maintain a stable
     position and heading in mid-air without drifting. This task is designed
@@ -131,7 +131,7 @@ class Hover(IsaacEnv):
         if randomization is not None:
             if "drone" in self.cfg.task.randomization:
                 self.drone.setup_randomization(self.cfg.task.randomization["drone"])
-        if randomization is not None and "payload" in randomization:
+        if "payload" in randomization:
             payload_cfg = randomization["payload"]
             self.payload_z_dist = D.Uniform(
                 torch.tensor([payload_cfg["z"][0]], device=self.device),
@@ -157,8 +157,8 @@ class Hover(IsaacEnv):
         self.init_vels = torch.zeros_like(self.drone.get_velocities())
 
         self.init_pos_dist = D.Uniform(
-            torch.tensor([-2.5, -2.5, 1.], device=self.device),
-            torch.tensor([2.5, 2.5, 2.5], device=self.device)
+            torch.tensor([-2.5, -2.5, 0.0], device=self.device),
+            torch.tensor([2.5, 2.5, 0.1], device=self.device)
         )
         self.init_rpy_dist = D.Uniform(
             torch.tensor([-.2, -.2, 0.], device=self.device) * torch.pi,
@@ -169,7 +169,7 @@ class Hover(IsaacEnv):
             torch.tensor([0., 0., 2.], device=self.device) * torch.pi
         )
 
-        self.target_pos = torch.tensor([[0.0, 0.0, 2.]], device=self.device)
+        self.target_pos = torch.tensor([[0.0, 0.0, 1.0]], device=self.device)
         self.target_heading = torch.zeros(self.num_envs, 1, 3, device=self.device)
         self.alpha = 0.8
 

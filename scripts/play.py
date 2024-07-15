@@ -109,17 +109,18 @@ def main(cfg):
         device=base_env.device
     )
 
-    stats_keys = [
-        k for k in base_env.reward_spec.keys(True, True) 
-        if isinstance(k, tuple) and k[0]=="stats"
-    ]
-    episode_stats = EpisodeStats(stats_keys)
+    # stats_keys = [
+    #     k for k in base_env.reward_spec.keys(True, True) 
+    #     if isinstance(k, tuple) and k[0]=="stats"
+    # ]
+    # episode_stats = EpisodeStats(stats_keys)
 
     tensordict = env.reset()
 
     while True:
         try:
             tensordict = policy(tensordict)
+            print(tensordict)
             _, tensordict = env.step_and_maybe_reset(tensordict)
         except KeyboardInterrupt:
             break

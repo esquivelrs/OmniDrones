@@ -346,5 +346,7 @@ class RateController(nn.Module):
         cmd = (self.mixer @ angacc_thrust.T).T
         cmd = (cmd / self.max_thrusts) * 2 - 1
         cmd = cmd.reshape(*batch_shape, -1)
+        #print("new")
+        #print(cmd)
         return cmd
 
