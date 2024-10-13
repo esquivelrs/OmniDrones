@@ -221,12 +221,14 @@ class AttitudeController(nn.Module):
             torch.tensor([inertia["xx"], inertia["yy"], inertia["zz"], 1])
         )
 
+#torch.tensor([3., 3., 0.035]) @ I[:3, :3].inverse()
+#torch.tensor([0.52, 0.52, 0.025]) @ I[:3, :3].inverse()
         self.mixer = nn.Parameter(compute_parameters(rotor_config, I))
         self.gain_attitude = nn.Parameter(
-            torch.tensor([3., 3., 0.035]) @ I[:3, :3].inverse()
+            torch.tensor([250., 500., 2.5]) @ I[:3, :3].inverse()
         )
         self.gain_angular_rate = nn.Parameter(
-            torch.tensor([0.52, 0.52, 0.025]) @ I[:3, :3].inverse()
+            torch.tensor([120.0, 16.0, 0.]) @ I[:3, :3].inverse()
         )
 
 
@@ -346,7 +348,5 @@ class RateController(nn.Module):
         cmd = (self.mixer @ angacc_thrust.T).T
         cmd = (cmd / self.max_thrusts) * 2 - 1
         cmd = cmd.reshape(*batch_shape, -1)
-        #print("new")
-        #print(cmd)
         return cmd
 

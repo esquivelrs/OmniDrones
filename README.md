@@ -1,3 +1,29 @@
+
+# Changes:
+
+New Task: `Gate/GateFlyThrough`
+
+Consists on flying from a random initialized point `A` to point `B` pasing trougth a manhole, describe by the USD in "omni_drones/usd/manhole.usd"
+
+
+python train.py headless=false task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200 task.env.num_envs=16
+python train.py headless=true task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200
+
+python train_gate.py headless=true task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200 task.env.num_envs=16
+
+
+python train.py task=Hover algo=ppo headless=true wandb.entity=dtu-projects task.env.num_envs=2048 eval_interval=200
+
+
+python train.py task=Hover algo=ppo headless=true wandb.entity=dtu-projects task.env.num_envs=500 eval_interval=2000 task.drone_model=crazyflie task.action_transform=rate
+
+python play.py task=Hover algo=ppo headless=false task.env.num_envs=1 task.drone_model=crazyflie task.action_transform=rate algo.checkpoint_path=outputs/2024-07-10/20-54-59/wandb/latest-run/files/checkpoint_final.pt
+
+
+
+
+
+# Original Readme
 ![Visualization of OmniDrones](docs/source/_static/visualization.jpg)
 
 ---
@@ -42,18 +68,3 @@ Please cite [this paper](https://arxiv.org/abs/2309.12825) if you use *OmniDrone
 
 Some of the abstractions and implementation was heavily inspired by [Isaac Orbit](https://github.com/NVIDIA-Omniverse/Orbit).
 
-
-
-
-python train.py headless=false task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200 task.env.num_envs=16
-python train.py headless=true task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200
-
-python train_gate.py headless=true task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200 task.env.num_envs=16
-
-
-python train.py task=Hover algo=ppo headless=true wandb.entity=dtu-projects task.env.num_envs=2048 eval_interval=200
-
-
-python train.py task=Hover algo=ppo headless=true wandb.entity=dtu-projects task.env.num_envs=500 eval_interval=2000 task.drone_model=crazyflie task.action_transform=rate
-
-python play.py task=Hover algo=ppo headless=false task.env.num_envs=1 task.drone_model=crazyflie task.action_transform=rate algo.checkpoint_path=outputs/2024-07-10/20-54-59/wandb/latest-run/files/checkpoint_final.pt

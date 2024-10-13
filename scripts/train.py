@@ -129,7 +129,7 @@ def main(cfg):
         elif action_transform == "attitude":
             from omni_drones.controllers import AttitudeController as _AttitudeController
             controller = _AttitudeController(9.81, base_env.drone.params).to(base_env.device)
-            transform = AttitudeController(torch.vmap(torch.vmap(controller)))
+            transform = AttitudeController(controller)
             transforms.append(transform)
         elif not action_transform.lower() == "none":
             raise NotImplementedError(f"Unknown action transform: {action_transform}")
