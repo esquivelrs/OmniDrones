@@ -6,22 +6,58 @@ New Task: `Gate/GateFlyThrough`
 Consists on flying from a random initialized point `A` to point `B` pasing trougth a manhole, describe by the USD in "omni_drones/usd/manhole.usd"
 
 
-python train.py headless=false task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200 task.env.num_envs=16
-python train.py headless=true task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200
+```
+    The drone is rewarded for flying through the gate and penalized for crashing.
+    Observations:
+        - Relative position to the target gate
+        - Drone state
+        - Obstacle position realtive to the drone (optional)
+        - Time
+        - Image from the camera (optional)
+    Actions:
+        - Drone actions
+    Reward:
+        - Reward for flying through the gate
+        - Reward for staying upright
+        - Reward for not spinning
+        - Reward for effort
+        - Penalty for collision
+```
 
-python train_gate.py headless=true task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200 task.env.num_envs=16
+## Docker container
+
+Modify the wandb key in `docker/Dockerfile` line 136:
+```
+ENV WANDB_API_KEY=<insert your wandb key>
+```
+To run the container:
+
+```
+cd docker
+docker compose build
+docker compose up
+```
+In a new terminal:
+
+```
+docker exec -it docker-isaacomnidrone-1 bash
+```
+
+To train a task use:
+```
+cd ./scrips
+python train.py headless=false task=Gate/GateFlyThrough wandb.entity=dtu-projects eval_interval=200
+```
+
+With camera the number of parallel environments must be limited with ` task.env.num_envs=8` 
 
 
-python train.py task=Hover algo=ppo headless=true wandb.entity=dtu-projects task.env.num_envs=2048 eval_interval=200
+To play the model:
+```
+python play.py task=Hover algo=ppo headless=false task.env.num_envs=1 task.drone_model=crazyflie task.action_transform=rate algo.checkpoint_path=<path_to _model>.pt
+```
 
-
-python train.py task=Hover algo=ppo headless=true wandb.entity=dtu-projects task.env.num_envs=500 eval_interval=2000 task.drone_model=crazyflie task.action_transform=rate
-
-python play.py task=Hover algo=ppo headless=false task.env.num_envs=1 task.drone_model=crazyflie task.action_transform=rate algo.checkpoint_path=outputs/2024-07-10/20-54-59/wandb/latest-run/files/checkpoint_final.pt
-
-
-
-
+For Sim2Real go to: `sim2real_omnidrones/README.md`
 
 # Original Readme
 ![Visualization of OmniDrones](docs/source/_static/visualization.jpg)

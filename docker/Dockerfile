@@ -90,8 +90,8 @@ RUN conda init
 # Set the shell to bash
 SHELL ["/bin/bash", "-c"]
 
-#RUN git clone https://github.com/btx0424/OmniDrones.git
-COPY OmniDrones OmniDrones
+RUN git clone https://github.com/btx0424/OmniDrones.git
+# COPY OmniDrones OmniDrones
 
 RUN source /root/miniconda3/bin/activate && \
     cp -r /home/ubuntu/OmniDrones/conda_setup/etc /root/miniconda3
@@ -103,9 +103,9 @@ RUN cd /home/ubuntu/tensordict && source /root/miniconda3/bin/activate && pip in
 RUN git clone https://github.com/pytorch/rl.git
 RUN cd /home/ubuntu/rl && source /root/miniconda3/bin/activate && python setup.py develop
 
-COPY orbit orbit
-RUN source /root/miniconda3/bin/activate && cd orbit && ln -s ${ISAACSIM_PATH} _isaac_sim && \ 
-    ./orbit.sh -i && ./orbit.sh -e
+# COPY orbit orbit
+# RUN source /root/miniconda3/bin/activate && cd orbit && ln -s ${ISAACSIM_PATH} _isaac_sim && \ 
+#     ./orbit.sh -i && ./orbit.sh -e
 
 #RUN git clone https://github.com/btx0424/OmniDrones.git
 #RUN cd /home/ubuntu/OmniDrones
@@ -133,7 +133,7 @@ RUN source /root/miniconda3/bin/activate && pip install -e .
 #     pip install tensordict-nightly torchrl-nightly
 
 #Set WANDB authorization
-ENV WANDB_API_KEY=e70c39b8904a17fc4e2079946a9fb9842b60ebc1
+ENV WANDB_API_KEY=<insert your wandb key>
 
 RUN git config --global --add safe.directory /home/ubuntu/OmniDrones
 

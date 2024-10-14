@@ -51,7 +51,21 @@ from .utils import attach_payload
 
 class GateFlyThrough(IsaacEnv):
     r"""
-    
+    The drone is rewarded for flying through the gate and penalized for crashing.
+    Observations:
+        - Relative position to the target gate
+        - Drone state
+        - Time
+        - Image from the camera (optional)
+    Actions:
+        - Drone actions
+    Reward:
+        - Reward for flying through the gate
+        - Reward for staying upright
+        - Reward for not spinning
+        - Reward for effort
+        - Penalty for collision
+        
     """
     def __init__(self, cfg, headless):
         self.reward_effort_weight = cfg.task.reward_effort_weight
@@ -357,9 +371,9 @@ class GateFlyThrough(IsaacEnv):
 
         #################################
         # image in 3x240x320
-        # image = self.camera_sensor.get_images()
-        # image_float = image["rgb"].float()  # Convert to float
-        # image_grey = image_float.mean(dim=1, keepdim=True) / 255.
+        image = self.camera_sensor.get_images()
+        image_float = image["rgb"].float()  # Convert to float
+        image_grey = image_float.mean(dim=1, keepdim=True) / 255.
 
 
         #image = image["rgb"].permute(0, 3, 1, 2).float() / 255.
@@ -369,7 +383,7 @@ class GateFlyThrough(IsaacEnv):
         return TensorDict({
             "agents": {
                 "observation": obs,
-                # "image": image_grey
+                "image": image_grey
             },
             "stats": self.stats,
             # "info": self.info
